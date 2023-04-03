@@ -52,6 +52,14 @@ let
     dontNpmInstall = true;
   }));
 
+  # debugservers on macOS require the 'com.apple.security.cs.debugger'
+  # entitlement which nixpkgs' lldb-server does not yet provide; see
+  # <https://github.com/NixOS/nixpkgs/pull/38624> for details
+  lldbServer = if stdenv.isDarwin then
+    "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver"
+  else
+    "${lldb.out}/bin/lldb-server";
+
 in stdenv.mkDerivation {
   pname = "vscode-extension-${publisher}-${pname}";
   inherit src version vscodeExtUniqueId vscodeExtPublisher vscodeExtName;
@@ -64,6 +72,9 @@ in stdenv.mkDerivation {
 
   postConfigure = ''
     cp -r ${nodeDeps}/lib/{node_modules,package-lock.json} .
+  '' + lib.optionalString stdenv.isDarwin ''
+    mkdir -p "$(pwd)/home"
+    export HOME="$(pwd)/home"
   '';
 
   cmakeFlags = [
@@ -81,8 +92,10 @@ in stdenv.mkDerivation {
     mkdir -p $ext/{adapter,formatters}
     mv -t $ext vsix-extracted/extension/*
     cp -t $ext/adapter ${adapter}/{bin,lib}/* ../adapter/*.py
+    cp -r -t $ext/adapter ../adapter/scripts
     wrapProgram $ext/adapter/codelldb \
-      --set-default LLDB_DEBUGSERVER_PATH "${lldb.out}/bin/lldb-server"
+      --prefix LD_LIBRARY_PATH : "$ext/lldb/lib" \
+      --set-default LLDB_DEBUGSERVER_PATH "${lldbServer}"
     cp -t $ext/formatters ../formatters/*.py
     ln -s ${lldb.lib} $ext/lldb
     # Mark that all components are installed.
