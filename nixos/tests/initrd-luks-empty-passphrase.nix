@@ -18,6 +18,12 @@ in {
       emptyDiskImages = [ 512 ];
       useBootLoader = true;
       useEFIBoot = true;
+      # This requires to have access
+      # to a host Nix store as
+      # the new root device is /dev/vdb
+      # an empty 512MiB drive, containing no Nix store.
+      mountHostNixStore = true;
+      # TODO: noNixStore = true;
     };
 
     boot.loader.systemd-boot.enable = true;
