@@ -1,4 +1,4 @@
-{ pkgs, haskellLib }:
+{ pkgs, haskellLib, fetchFromGitHub }:
 
 with haskellLib;
 
@@ -9,6 +9,14 @@ let
     overrideCabal (old: {
       jailbreak = assert old.revision or "0" == toString rev; true;
     });
+
+  # merge into master of https://github.com/haskell/cabal/pull/8726
+  cabal-src = fetchFromGitHub {
+    owner = "haskell";
+    repo = "cabal";
+    rev = "94615d6ac6ef585329eab192ed70486e722eeca1";
+    sha256 = "sha256-2nSTlPMHEXtv3XsDVBCR8EdeYmSQYztQno+NQIJbf1c=";
+  };
 in
 
 self: super: {
@@ -85,8 +93,14 @@ self: super: {
   # Forbids mtl >= 2.3
   ChasingBottoms = doJailbreak super.ChasingBottoms;
   # Forbids base >= 4.18
-  cabal-install-solver = doJailbreak super.cabal-install-solver;
-  cabal-install = doJailbreak super.cabal-install;
+  cabal-install-solver = doJailbreak(self.callCabal2nix "cabal-install-solver" (cabal-src + "/cabal-install-solver") {});
+
+  cabal-install = doJailbreak(self.callCabal2nix "cabal-install" (cabal-src + "/cabal-install") {
+    # Same as in the generated ./hackage-packages.nix
+    Cabal-described = null;
+    Cabal-QuickCheck = null;
+    Cabal-tree-diff = null;
+  });
   # Forbids base >= 4.18
   lukko = doJailbreak super.lukko;
 

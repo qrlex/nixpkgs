@@ -260,6 +260,10 @@ stdenv.mkDerivation ({
 
   inherit src;
 
+  patches = [
+     ./cabal-multi-repl.patch # cabal submodule bump: see first line of patch file for before/after revisions
+  ];
+
   enableParallelBuilding = true;
 
   postPatch = ''
